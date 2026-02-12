@@ -1,5 +1,6 @@
 import React from "react";
 import Sidebar from "@/components/Sidebar";
+import { AppProvider } from "@/redux/AppProvider";
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -16,7 +17,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
       {/* Main content flows naturally */}
       <main className="flex-1 p-8">
-        {children}
+        <AppProvider>{children}</AppProvider>
       </main>
     </div>
   );
