@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
 import { format } from "date-fns";
 import { CalendarIcon, Check, X, Clock, Search } from "lucide-react";
@@ -30,15 +30,62 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchStudents,
+  fetchAttendanceByDate,
+  saveAttendanceAsync
+} from "@/redux/slices/attendanceSlice";
+import { RootState, AppDispatch } from "@/redux/store";
+import { toast } from "react-toastify";
+import { grades, classes } from "@/data/formOptions";
 
 export default function DailyAttendancePage() {
-  const [date, setDate] = React.useState<Date>(new Date());
-  const [attendance, setAttendance] = React.useState<Record<string, string>>(
-    {},
-  );
+  const [date, setDate] = useState<Date>(new Date());
+  const [attendance, setAttendance] = useState<Record<string, string>>({});
+  const [selectedGrade, setSelectedGrade] = useState<string>("");
+  const [selectedClass, setSelectedClass] = useState<string>("");
 
-  const students = useSelector((state: any) => state.studentInfo.student);
+  const dispatch = useDispatch<AppDispatch>();
+  const { students, attendance: savedAttendance, loading } = useSelector((state: RootState) => state.attendance);
+
+  useEffect(() => {
+    dispatch(fetchStudents());
+  }, [dispatch]);
+
+  useEffect(() => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    dispatch(fetchAttendanceByDate(dateStr));
+  }, [dispatch, date]);
+
+  useEffect(() => {
+    // Populate local attendance state when savedAttendance changes
+    const newAttendance: Record<string, string> = {};
+    savedAttendance.forEach(a => {
+      newAttendance[a.studentId] = a.status.toLowerCase();
+    });
+    setAttendance(newAttendance);
+  }, [savedAttendance]);
+
+  const saveAllAttendance = async () => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    let successCount = 0;
+
+    try {
+      for (const studentId of Object.keys(attendance)) {
+        const status = attendance[studentId];
+        await dispatch(saveAttendanceAsync({
+          studentId,
+          date: dateStr,
+          status: status === "present" ? "Present" : status === "absent" ? "Absent" : "Late"
+        })).unwrap();
+        successCount++;
+      }
+      toast.success(`Saved attendance for ${successCount} students`);
+    } catch (error) {
+      toast.error("Failed to save some attendance records");
+    }
+  };
 
   const handleAttendance = (studentId: string, status: string) => {
     setAttendance((prev) => ({
@@ -46,6 +93,13 @@ export default function DailyAttendancePage() {
       [studentId]: status,
     }));
   };
+
+  // Filter students based on selected grade and class
+  const filteredStudents = students.filter((student: any) => {
+    if (selectedGrade && student.grade !== selectedGrade) return false;
+    if (selectedClass && !student.class.includes(selectedClass)) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -56,7 +110,10 @@ export default function DailyAttendancePage() {
             Select grade and date to mark student attendance.
           </p>
         </div>
-        <Button className="bg-pink-600 hover:bg-pink-700 text-white shadow-lg shadow-pink-500/20">
+        <Button
+          onClick={saveAllAttendance}
+          className="bg-pink-600 hover:bg-pink-700 text-white shadow-lg shadow-pink-500/20"
+        >
           Save All Attendance
         </Button>
       </div>
@@ -65,7 +122,10 @@ export default function DailyAttendancePage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-zinc-900/40 border border-zinc-800/50 backdrop-blur-md p-6 rounded-2xl ">
           <h1 className="text-sm font-medium text-zinc-400">Total Students</h1>
-          <p className="text-3xl font-bold mt-1">{students.length}</p>
+          <p className="text-3xl font-bold mt-1">{filteredStudents.length}</p>
+          {(selectedGrade || selectedClass) && (
+            <p className="text-xs text-zinc-500 mt-1">of {students.length} total</p>
+          )}
         </div>
         <div className="bg-zinc-900/40 border border-zinc-800/50 backdrop-blur-md p-6 rounded-2xl ">
           <h1 className="text-sm font-medium text-emerald-500/80">Present</h1>
@@ -98,15 +158,31 @@ export default function DailyAttendancePage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-          <Select>
+          <Select value={selectedGrade} onValueChange={setSelectedGrade}>
             <SelectTrigger className="w-[160px] bg-zinc-950/50 border-zinc-800">
-              <SelectValue placeholder="Select Grade" />
+              <SelectValue placeholder="All Grades" />
             </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-zinc-800">
-              <SelectItem value="10">Grade 10</SelectItem>
-              <SelectItem value="11">Grade 11</SelectItem>
-              <SelectItem value="12">Grade 12</SelectItem>
-              <SelectItem value="13">Grade 13</SelectItem>
+            <SelectContent className="bg-gray-200 border-zinc-800">
+              <SelectItem value="all">All Grades</SelectItem>
+              {grades.map((grade) => (
+                <SelectItem key={grade.value} value={grade.value}>
+                  Grade {grade.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedClass} onValueChange={setSelectedClass}>
+            <SelectTrigger className="w-[160px] bg-zinc-950/50 border-zinc-800">
+              <SelectValue placeholder="All Classes" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-200 border-zinc-800">
+              <SelectItem value="all">All Classes</SelectItem>
+              {classes.map((cls) => (
+                <SelectItem key={cls.value} value={cls.value}>
+                  Class {cls.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -136,6 +212,19 @@ export default function DailyAttendancePage() {
               />
             </PopoverContent>
           </Popover>
+
+          {(selectedGrade || selectedClass) && (
+            <Button
+              variant="ghost"
+              className="text-zinc-500 hover:text-zinc-300"
+              onClick={() => {
+                setSelectedGrade("");
+                setSelectedClass("");
+              }}
+            >
+              Clear Filters
+            </Button>
+          )}
         </div>
       </div>
 
@@ -155,98 +244,33 @@ export default function DailyAttendancePage() {
               </TableHead>
             </TableRow>
           </TableHeader>
-          {/* <TableBody>
-            {studentsData.map((student) => (
-              <TableRow
-                key={student.id}
-                className="border-zinc-800/50 hover:bg-zinc-800/30 transition-colors"
-              >
-                <TableCell className="py-4 px-6 font-mono text-xs text-zinc-500">
-                  {student.id}
-                </TableCell>
-                <TableCell className="py-4 px-6">
-                  <div className="flex flex-col text-zinc-200">
-                    <span className="font-medium">{student.name}</span>
-                    <span className="text-xs text-zinc-500">
-                      {student.class}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell className="py-4 px-6">
-                  <div className="flex items-center justify-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleAttendance(student.id, "present")}
-                      className={cn(
-                        "h-8 border-zinc-800 transition-all",
-                        attendance[student.id] === "present"
-                          ? "bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600"
-                          : "bg-zinc-950/50 text-emerald-500 hover:bg-emerald-500/10 hover:text-emerald-500",
-                      )}
-                    >
-                      <Check className="w-3.5 h-3.5 mr-1" />
-                      Present
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleAttendance(student.id, "absent")}
-                      className={cn(
-                        "h-8 border-zinc-800 transition-all",
-                        attendance[student.id] === "absent"
-                          ? "bg-rose-500 text-white border-rose-500 hover:bg-rose-600"
-                          : "bg-zinc-950/50 text-rose-500 hover:bg-rose-500/10 hover:text-rose-500",
-                      )}
-                    >
-                      <X className="w-3.5 h-3.5 mr-1" />
-                      Absent
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleAttendance(student.id, "late")}
-                      className={cn(
-                        "h-8 border-zinc-800 transition-all",
-                        attendance[student.id] === "late"
-                          ? "bg-amber-500 text-white border-amber-500 hover:bg-amber-600"
-                          : "bg-zinc-950/50 text-amber-500 hover:bg-amber-500/10 hover:text-amber-500",
-                      )}
-                    >
-                      <Clock className="w-3.5 h-3.5 mr-1" />
-                      Late
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody> */}
+
 
           <TableBody>
-            {students.length === 0 ? (
+            {filteredStudents.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={3}
                   className="py-10 text-center text-zinc-500"
                 >
-                  Data not found
+                  {students.length === 0 ? "No students found" : "No students match the selected filters"}
                 </TableCell>
               </TableRow>
             ) : (
-              students.map((student: any) => (
+              filteredStudents.map((student: any) => (
                 <TableRow
-                  key={student.id}
+                  key={student.studentId}
                   className="border-zinc-800/50 hover:bg-zinc-800/30 transition-colors"
                 >
                   <TableCell className="py-4 px-6 font-mono text-xs text-zinc-500">
-                    {student.id}
+                    {student.studentId}
                   </TableCell>
 
                   <TableCell className="py-4 px-6">
                     <div className="flex flex-col text-zinc-200">
                       <span className="font-medium">{student.name}</span>
                       <span className="text-xs text-zinc-500">
-                        {student.class}
+                        {student.grade}-{student.class}
                       </span>
                     </div>
                   </TableCell>
@@ -256,10 +280,10 @@ export default function DailyAttendancePage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleAttendance(student.id, "present")}
+                        onClick={() => handleAttendance(student.studentId, "present")}
                         className={cn(
                           "h-8 border-zinc-800 transition-all",
-                          attendance[student.id] === "present"
+                          attendance[student.studentId] === "present"
                             ? "bg-emerald-500 text-white border-emerald-500 hover:bg-emerald-600"
                             : "bg-zinc-950/50 text-emerald-500 hover:bg-emerald-500/10 hover:text-emerald-500",
                         )}
@@ -271,10 +295,10 @@ export default function DailyAttendancePage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleAttendance(student.id, "absent")}
+                        onClick={() => handleAttendance(student.studentId, "absent")}
                         className={cn(
                           "h-8 border-zinc-800 transition-all",
-                          attendance[student.id] === "absent"
+                          attendance[student.studentId] === "absent"
                             ? "bg-rose-500 text-white border-rose-500 hover:bg-rose-600"
                             : "bg-zinc-950/50 text-rose-500 hover:bg-rose-500/10 hover:text-rose-500",
                         )}
@@ -286,10 +310,10 @@ export default function DailyAttendancePage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleAttendance(student.id, "late")}
+                        onClick={() => handleAttendance(student.studentId, "late")}
                         className={cn(
                           "h-8 border-zinc-800 transition-all",
-                          attendance[student.id] === "late"
+                          attendance[student.studentId] === "late"
                             ? "bg-amber-500 text-white border-amber-500 hover:bg-amber-600"
                             : "bg-zinc-950/50 text-amber-500 hover:bg-amber-500/10 hover:text-amber-500",
                         )}

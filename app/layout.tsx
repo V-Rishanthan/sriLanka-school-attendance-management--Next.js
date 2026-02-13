@@ -9,6 +9,9 @@ const poppins = Poppins({
   variable: "--font-poppins",
 });
 
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -23,6 +26,7 @@ export default function RootLayout({
         <AppProvider>
           <LenisScroll />
           {children}
+          <ToastContainer position="bottom-right" theme="dark" />
         </AppProvider>
       </body>
     </html>

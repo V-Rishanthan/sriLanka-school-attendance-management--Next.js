@@ -54,65 +54,27 @@ import {
 } from "@/components/ui/dialog";
 import AddStudentForm from "@/components/AddStudentForm";
 import { id } from "date-fns/locale";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchStudents } from "@/redux/slices/attendanceSlice";
+import { AppDispatch, RootState } from "@/redux/store";
+import { useEffect } from "react";
 
 export default function StudentManagement() {
   const [date, setDate] = useState<Date>(new Date());
   const [openForm, setOpenForm] = useState(false);
 
-  const students = [
-    {
-      id: "STU001",
-      name: "John Doe",
-      class: "10-A",
-      status: "Present",
-      email: "john@example.com",
-    },
-    {
-      id: "STU002",
-      name: "Jane Smith",
-      class: "10-B",
-      status: "Absent",
-      email: "jane@example.com",
-    },
-    {
-      id: "STU003",
-      name: "Alice Johnson",
-      class: "11-A",
-      status: "Present",
-      email: "alice@example.com",
-    },
-    {
-      id: "STU004",
-      name: "Bob Brown",
-      class: "11-A",
-      status: "Late",
-      email: "bob@example.com",
-    },
-    {
-      id: "STU005",
-      name: "Charlie Davis",
-      class: "10-A",
-      status: "Present",
-      email: "charlie@example.com",
-    },
-    {
-      id: "STU006",
-      name: "Nimal Perera",
-      class: "12-B",
-      status: "Present",
-      email: "nimal@example.com",
-    },
-    {
-      id: "STU007",
-      name: "Sunil Silva",
-      class: "9-C",
-      status: "Absent",
-      email: "sunil@example.com",
-    },
-  ];
+  const dispatch = useDispatch<AppDispatch>();
+  const { students, attendance } = useSelector((state: RootState) => state.attendance);
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
+  useEffect(() => {
+    dispatch(fetchStudents());
+  }, [dispatch]);
+
+  const getStatusColor = (status?: string) => {
+    if (!status) {
+      return <span className="text-zinc-500">Not Marked</span>;
+    }
+    switch (status?.toLowerCase()) {
       case "present":
         return "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
       case "absent":
@@ -122,6 +84,8 @@ export default function StudentManagement() {
       default:
         return "bg-zinc-500/10 text-zinc-500 border-zinc-500/20";
     }
+
+
   };
 
   return (
@@ -281,13 +245,13 @@ export default function StudentManagement() {
                 </TableCell>
               </TableRow>
             ) : (
-              students.map((student) => (
+              students.map((student: any) => (
                 <TableRow
-                  key={student.id}
+                  key={student.studentId}
                   className="border-zinc-800/50 hover:bg-zinc-800/30 transition-colors group"
                 >
                   <TableCell className="py-4 px-6 font-mono text-xs text-zinc-500">
-                    {student.id}
+                    {student.studentId}
                   </TableCell>
 
                   <TableCell className="py-4 px-6">
@@ -296,13 +260,13 @@ export default function StudentManagement() {
                         {student.name}
                       </span>
                       <span className="text-xs text-zinc-500">
-                        {student.email}
+                        {student.email || "No email"}
                       </span>
                     </div>
                   </TableCell>
 
                   <TableCell className="py-4 px-6 text-zinc-300">
-                    {student.class}
+                    {student.grade}-{student.class}
                   </TableCell>
 
                   <TableCell className="py-4 px-6 text-center">
