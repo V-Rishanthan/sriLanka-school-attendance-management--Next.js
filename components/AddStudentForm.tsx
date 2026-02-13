@@ -42,7 +42,7 @@ export default function AddStudentForm() {
           name: formData.name,
           grade: formData.grade, // keep grade
           class: combinedClass, // save as 1-A
-        })
+        }),
       ).unwrap();
 
       toast.success("Student added successfully!");
@@ -140,7 +140,9 @@ export default function AddStudentForm() {
             <SelectContent>
               {classes.map((cls) => (
                 <SelectItem key={cls.value} value={cls.value}>
-                  {formData.grade ? `${formData.grade}-${cls.value}` : cls.label}
+                  {formData.grade
+                    ? `${formData.grade}-${cls.value}`
+                    : cls.label}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -64,7 +64,9 @@ export default function StudentManagement() {
   const [openForm, setOpenForm] = useState(false);
 
   const dispatch = useDispatch<AppDispatch>();
-  const { students, attendance } = useSelector((state: RootState) => state.attendance);
+  const { students, attendance } = useSelector(
+    (state: RootState) => state.attendance,
+  );
 
   useEffect(() => {
     dispatch(fetchStudents());
@@ -84,8 +86,6 @@ export default function StudentManagement() {
       default:
         return "bg-zinc-500/10 text-zinc-500 border-zinc-500/20";
     }
-
-
   };
 
   return (
@@ -266,7 +266,7 @@ export default function StudentManagement() {
                   </TableCell>
 
                   <TableCell className="py-4 px-6 text-zinc-300">
-                    {student.grade}-{student.class}
+                    {student.class}
                   </TableCell>
 
                   <TableCell className="py-4 px-6 text-center">

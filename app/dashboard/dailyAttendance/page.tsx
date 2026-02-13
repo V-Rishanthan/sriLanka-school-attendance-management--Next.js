@@ -34,7 +34,7 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   fetchStudents,
   fetchAttendanceByDate,
-  saveAttendanceAsync
+  saveAttendanceAsync,
 } from "@/redux/slices/attendanceSlice";
 import { RootState, AppDispatch } from "@/redux/store";
 import { toast } from "react-toastify";
@@ -47,7 +47,11 @@ export default function DailyAttendancePage() {
   const [selectedClass, setSelectedClass] = useState<string>("");
 
   const dispatch = useDispatch<AppDispatch>();
-  const { students, attendance: savedAttendance, loading } = useSelector((state: RootState) => state.attendance);
+  const {
+    students,
+    attendance: savedAttendance,
+    loading,
+  } = useSelector((state: RootState) => state.attendance);
 
   useEffect(() => {
     dispatch(fetchStudents());
@@ -61,7 +65,7 @@ export default function DailyAttendancePage() {
   useEffect(() => {
     // Populate local attendance state when savedAttendance changes
     const newAttendance: Record<string, string> = {};
-    savedAttendance.forEach(a => {
+    savedAttendance.forEach((a) => {
       newAttendance[a.studentId] = a.status.toLowerCase();
     });
     setAttendance(newAttendance);
@@ -74,11 +78,18 @@ export default function DailyAttendancePage() {
     try {
       for (const studentId of Object.keys(attendance)) {
         const status = attendance[studentId];
-        await dispatch(saveAttendanceAsync({
-          studentId,
-          date: dateStr,
-          status: status === "present" ? "Present" : status === "absent" ? "Absent" : "Late"
-        })).unwrap();
+        await dispatch(
+          saveAttendanceAsync({
+            studentId,
+            date: dateStr,
+            status:
+              status === "present"
+                ? "Present"
+                : status === "absent"
+                  ? "Absent"
+                  : "Late",
+          }),
+        ).unwrap();
         successCount++;
       }
       toast.success(`Saved attendance for ${successCount} students`);
@@ -124,7 +135,9 @@ export default function DailyAttendancePage() {
           <h1 className="text-sm font-medium text-zinc-400">Total Students</h1>
           <p className="text-3xl font-bold mt-1">{filteredStudents.length}</p>
           {(selectedGrade || selectedClass) && (
-            <p className="text-xs text-zinc-500 mt-1">of {students.length} total</p>
+            <p className="text-xs text-zinc-500 mt-1">
+              of {students.length} total
+            </p>
           )}
         </div>
         <div className="bg-zinc-900/40 border border-zinc-800/50 backdrop-blur-md p-6 rounded-2xl ">
@@ -245,7 +258,6 @@ export default function DailyAttendancePage() {
             </TableRow>
           </TableHeader>
 
-
           <TableBody>
             {filteredStudents.length === 0 ? (
               <TableRow>
@@ -253,7 +265,9 @@ export default function DailyAttendancePage() {
                   colSpan={3}
                   className="py-10 text-center text-zinc-500"
                 >
-                  {students.length === 0 ? "No students found" : "No students match the selected filters"}
+                  {students.length === 0
+                    ? "No students found"
+                    : "No students match the selected filters"}
                 </TableCell>
               </TableRow>
             ) : (
@@ -270,7 +284,7 @@ export default function DailyAttendancePage() {
                     <div className="flex flex-col text-zinc-200">
                       <span className="font-medium">{student.name}</span>
                       <span className="text-xs text-zinc-500">
-                        {student.grade}-{student.class}
+                        {student.class}
                       </span>
                     </div>
                   </TableCell>
@@ -280,7 +294,9 @@ export default function DailyAttendancePage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleAttendance(student.studentId, "present")}
+                        onClick={() =>
+                          handleAttendance(student.studentId, "present")
+                        }
                         className={cn(
                           "h-8 border-zinc-800 transition-all",
                           attendance[student.studentId] === "present"
@@ -295,7 +311,9 @@ export default function DailyAttendancePage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleAttendance(student.studentId, "absent")}
+                        onClick={() =>
+                          handleAttendance(student.studentId, "absent")
+                        }
                         className={cn(
                           "h-8 border-zinc-800 transition-all",
                           attendance[student.studentId] === "absent"
@@ -310,7 +328,9 @@ export default function DailyAttendancePage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleAttendance(student.studentId, "late")}
+                        onClick={() =>
+                          handleAttendance(student.studentId, "late")
+                        }
                         className={cn(
                           "h-8 border-zinc-800 transition-all",
                           attendance[student.studentId] === "late"
